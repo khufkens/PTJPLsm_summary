@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.2.335">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Koen Hufkens">
+
+<title>Uncertainty analysis</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1.6em;
+  vertical-align: middle;
+}
+</style>
+
+
+<script src="uncertainty_analysis_files/libs/clipboard/clipboard.min.js"></script>
+<script src="uncertainty_analysis_files/libs/quarto-html/quarto.js"></script>
+<script src="uncertainty_analysis_files/libs/quarto-html/popper.min.js"></script>
+<script src="uncertainty_analysis_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="uncertainty_analysis_files/libs/quarto-html/anchor.min.js"></script>
+<link href="uncertainty_analysis_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="uncertainty_analysis_files/libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="uncertainty_analysis_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="uncertainty_analysis_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="uncertainty_analysis_files/libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+
+
+</head>
+
+<body class="fullcontent">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Uncertainty analysis</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Koen Hufkens </p>
+          </div>
+  </div>
+    
+  
+    
+  </div>
+  
+
+</header>
+
+<section id="what-and-how-things-were-covered" class="level2">
+<h2 class="anchored" data-anchor-id="what-and-how-things-were-covered">What and how things were covered</h2>
+<p>First I checked parity of the original code with my refactored code. This is OK!</p>
+<p>In all cases I visually checked the output of the current model run to the reference data provided. Input data are also historical data except for the SMAP input files (which are “new”). The bias between the reference and current model run is reported, with the maps of both outputs shown above on the same colour scale.</p>
+<p>Comparisons between different implementations is done visually by comparing plots to the plots with the <code>default_</code> prefix.</p>
+<p>Additionally, I’ve updated the workflow to use the NCO aggregation methodology, assuming that some of the discrepancies might be the result of fill values which are not counted in calculating the mean monthly values in R (where NAs are ignored).</p>
+<div class="panel-tabset">
+<ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-1-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-1" role="tab" aria-controls="tabset-1-1" aria-selected="true" href="">Canopy transpiration</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-1-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-2" role="tab" aria-controls="tabset-1-2" aria-selected="false" href="">Interception evaporation</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-1-3-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-3" role="tab" aria-controls="tabset-1-3" aria-selected="false" href="">Soil evaporation</a></li></ul>
+<div class="tab-content">
+<div id="tabset-1-1" class="unnumbered tab-pane active" role="tabpanel" aria-labelledby="tabset-1-1-tab">
+<div class="cell">
+<div class="cell-output-display">
+<p><img src="images/default_canopy_transpiration.png" class="img-fluid" style="width:80.0%"></p>
+</div>
+</div>
+</div>
+<div id="tabset-1-2" class="unnumbered tab-pane" role="tabpanel" aria-labelledby="tabset-1-2-tab">
+<div class="cell">
+<div class="cell-output-display">
+<p><img src="images/default_interception_evaporation.png" class="img-fluid" style="width:80.0%"></p>
+</div>
+</div>
+</div>
+<div id="tabset-1-3" class="unnumbered tab-pane" role="tabpanel" aria-labelledby="tabset-1-3-tab">
+<div class="cell">
+<div class="cell-output-display">
+<p><img src="images/default_soil_evaporation.png" class="img-fluid" style="width:80.0%"></p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section id="main-parameters-concidered" class="level2">
+<h2 class="anchored" data-anchor-id="main-parameters-concidered">Main parameters concidered</h2>
+<p>A number of parameters influence the results of:</p>
+<ul>
+<li>canopy transpiration</li>
+<li>interception evaporation</li>
+<li>soil evaporation</li>
+</ul>
+<p>mainly, <code>relative_surface_wetness</code> and <code>soil_net_radiation</code>.</p>
+<p>The latter is only dependent on the climate (although coupled to the vegetation), the former has an explicit vegetation component to it via <code>leaf_area_index</code>. Both are prime candidates to explain the mismatch as the pattern shown reflects biogeographic regions. Changes to the model runs focus on aspects which would influence these parameters.</p>
+<section id="relative-humidity-and-relative-surface-wetness" class="level3">
+<h3 class="anchored" data-anchor-id="relative-humidity-and-relative-surface-wetness">relative humidity and relative surface wetness</h3>
+<p>Relative surface wetness (relative humidity<sup>4</sup>) mediates all the above results. However, few mistakes can be made as the data only depends on pressure and temperature and pressure data - and the underlying physical formulas are correct.</p>
+<p>Swapping out the mean daily temperature for the maximum temperature, should decrease relative humidity. The results from this exercise are shown below, showing a shift in the observed patterns when comparing the reference data to the current model run.</p>
+<p>In short, relative surface wetness is extremely sensitive to (small) changes in the input variables. However, it is unsure what other inputs could be used to increase correspondence between reference and current model runs.</p>
+<div class="cell">
+
+</div>
+<div class="panel-tabset">
+<ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-2-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-2-1" role="tab" aria-controls="tabset-2-1" aria-selected="true" href="">canopy transpiration</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-2-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-2-2" role="tab" aria-controls="tabset-2-2" aria-selected="false" href="">default canopy transpiration</a></li></ul>
+<div class="tab-content">
+<div id="tabset-2-1" class="unnumbered tab-pane active" role="tabpanel" aria-labelledby="tabset-2-1-tab">
+<div class="cell">
+<div class="cell-output-display">
+<p><img src="images/change_temp_canopy_transpiration.png" class="img-fluid" style="width:80.0%"></p>
+</div>
+</div>
+</div>
+<div id="tabset-2-2" class="unnumbered tab-pane" role="tabpanel" aria-labelledby="tabset-2-2-tab">
+<div class="cell">
+<div class="cell-output-display">
+<p><img src="images/default_canopy_transpiration.png" class="img-fluid" style="width:80.0%"></p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="panel-tabset">
+<ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-3-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-3-1" role="tab" aria-controls="tabset-3-1" aria-selected="true" href="">interception evaporation</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-3-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-3-2" role="tab" aria-controls="tabset-3-2" aria-selected="false" href="">default interception evaporation</a></li></ul>
+<div class="tab-content">
+<div id="tabset-3-1" class="unnumbered tab-pane active" role="tabpanel" aria-labelledby="tabset-3-1-tab">
+<div class="cell">
+<div class="cell-output-display">
+<p><img src="images/change_temp_interception_evaporation.png" class="img-fluid" style="width:80.0%"></p>
+</div>
+</div>
+</div>
+<div id="tabset-3-2" class="unnumbered tab-pane" role="tabpanel" aria-labelledby="tabset-3-2-tab">
+<div class="cell">
+<div class="cell-output-display">
+<p><img src="images/default_interception_evaporation.png" class="img-fluid" style="width:80.0%"></p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="panel-tabset">
+<ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-4-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-4-1" role="tab" aria-controls="tabset-4-1" aria-selected="true" href="">soil evaporation</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-4-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-4-2" role="tab" aria-controls="tabset-4-2" aria-selected="false" href="">default soils evaporation</a></li></ul>
+<div class="tab-content">
+<div id="tabset-4-1" class="unnumbered tab-pane active" role="tabpanel" aria-labelledby="tabset-4-1-tab">
+<div class="cell">
+<div class="cell-output-display">
+<p><img src="images/change_temp_soil_evaporation.png" class="img-fluid" style="width:80.0%"></p>
+</div>
+</div>
+</div>
+<div id="tabset-4-2" class="unnumbered tab-pane" role="tabpanel" aria-labelledby="tabset-4-2-tab">
+<div class="cell">
+<div class="cell-output-display">
+<p><img src="images/default_soil_evaporation.png" class="img-fluid" style="width:80.0%"></p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section id="constraint-fapar-fipar" class="level3">
+<h3 class="anchored" data-anchor-id="constraint-fapar-fipar">constraint fAPAR / fIPAR</h3>
+<p>Constraining fAPAR / fIPAR to 0 - 1 ranges before the calculation of derivative indices does not change the results appreciably. The idea here is that some of the discrepancies are caused by the leaf area index influenced variables (gfrac, soil_net_radiation), where:</p>
+<p><code>canopy_net_radiation = net_radiation - soil_net_radiation</code></p>
+<p>which is the main energy budget component in interception evaporation and canopy transpiration. Out of bound values could then be a source of the biases seen in the data.</p>
+<div class="cell">
+
+</div>
+<div class="panel-tabset">
+<ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-5-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-5-1" role="tab" aria-controls="tabset-5-1" aria-selected="true" href="">canopy transpiration</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-5-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-5-2" role="tab" aria-controls="tabset-5-2" aria-selected="false" href="">default canopy transpiration</a></li></ul>
+<div class="tab-content">
+<div id="tabset-5-1" class="unnumbered tab-pane active" role="tabpanel" aria-labelledby="tabset-5-1-tab">
+<div class="cell">
+<div class="cell-output-display">
+<p><img src="images/clip_APAR_canopy_transpiration.png" class="img-fluid" style="width:80.0%"></p>
+</div>
+</div>
+</div>
+<div id="tabset-5-2" class="unnumbered tab-pane" role="tabpanel" aria-labelledby="tabset-5-2-tab">
+<div class="cell">
+<div class="cell-output-display">
+<p><img src="images/default_canopy_transpiration.png" class="img-fluid" style="width:80.0%"></p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="panel-tabset">
+<ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-6-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-6-1" role="tab" aria-controls="tabset-6-1" aria-selected="true" href="">interception evaporation</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-6-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-6-2" role="tab" aria-controls="tabset-6-2" aria-selected="false" href="">default interception evaporation</a></li></ul>
+<div class="tab-content">
+<div id="tabset-6-1" class="unnumbered tab-pane active" role="tabpanel" aria-labelledby="tabset-6-1-tab">
+<div class="cell">
+<div class="cell-output-display">
+<p><img src="images/clip_APAR_interception_evaporation.png" class="img-fluid" style="width:80.0%"></p>
+</div>
+</div>
+</div>
+<div id="tabset-6-2" class="unnumbered tab-pane" role="tabpanel" aria-labelledby="tabset-6-2-tab">
+<div class="cell">
+<div class="cell-output-display">
+<p><img src="images/default_interception_evaporation.png" class="img-fluid" style="width:80.0%"></p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="panel-tabset">
+<ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-7-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-7-1" role="tab" aria-controls="tabset-7-1" aria-selected="true" href="">soil evaporation</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-7-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-7-2" role="tab" aria-controls="tabset-7-2" aria-selected="false" href="">default soils evaporation</a></li></ul>
+<div class="tab-content">
+<div id="tabset-7-1" class="unnumbered tab-pane active" role="tabpanel" aria-labelledby="tabset-7-1-tab">
+<div class="cell">
+<div class="cell-output-display">
+<p><img src="images/clip_APAR_soil_evaporation.png" class="img-fluid" style="width:80.0%"></p>
+</div>
+</div>
+</div>
+<div id="tabset-7-2" class="unnumbered tab-pane" role="tabpanel" aria-labelledby="tabset-7-2-tab">
+<div class="cell">
+<div class="cell-output-display">
+<p><img src="images/default_soil_evaporation.png" class="img-fluid" style="width:80.0%"></p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section id="modulate-kpar-0.4" class="level3">
+<h3 class="anchored" data-anchor-id="modulate-kpar-0.4">modulate KPAR (0.4)</h3>
+<p>KPAR determines the shape of the relation between fIPAR and LAI, modulating this parameter should provide some insight into the response of LAI on the model output (via soil_net_radiation and hence canopy_net_radiation).</p>
+<p>Patterns are inconsistent and non-linear for canopy transpiration, with arid regions flipping in the sign of the response between reference and current model run values. There is surprisingly little influence on interception evaporation, only a slight lower biases.</p>
+<div class="cell">
+
+</div>
+<div class="panel-tabset">
+<ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-8-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-8-1" role="tab" aria-controls="tabset-8-1" aria-selected="true" href="">canopy transpiration</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-8-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-8-2" role="tab" aria-controls="tabset-8-2" aria-selected="false" href="">default canopy transpiration</a></li></ul>
+<div class="tab-content">
+<div id="tabset-8-1" class="unnumbered tab-pane active" role="tabpanel" aria-labelledby="tabset-8-1-tab">
+<div class="cell">
+<div class="cell-output-display">
+<p><img src="images/change_kpar_0.4_canopy_transpiration.png" class="img-fluid" style="width:80.0%"></p>
+</div>
+</div>
+</div>
+<div id="tabset-8-2" class="unnumbered tab-pane" role="tabpanel" aria-labelledby="tabset-8-2-tab">
+<div class="cell">
+<div class="cell-output-display">
+<p><img src="images/default_canopy_transpiration.png" class="img-fluid" style="width:80.0%"></p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="panel-tabset">
+<ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-9-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-9-1" role="tab" aria-controls="tabset-9-1" aria-selected="true" href="">interception evaporation</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-9-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-9-2" role="tab" aria-controls="tabset-9-2" aria-selected="false" href="">default interception evaporation</a></li></ul>
+<div class="tab-content">
+<div id="tabset-9-1" class="unnumbered tab-pane active" role="tabpanel" aria-labelledby="tabset-9-1-tab">
+<div class="cell">
+<div class="cell-output-display">
+<p><img src="images/change_kpar_0.4_interception_evaporation.png" class="img-fluid" style="width:80.0%"></p>
+</div>
+</div>
+</div>
+<div id="tabset-9-2" class="unnumbered tab-pane" role="tabpanel" aria-labelledby="tabset-9-2-tab">
+<div class="cell">
+<div class="cell-output-display">
+<p><img src="images/default_interception_evaporation.png" class="img-fluid" style="width:80.0%"></p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="panel-tabset">
+<ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-10-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-10-1" role="tab" aria-controls="tabset-10-1" aria-selected="true" href="">soil evaporation</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-10-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-10-2" role="tab" aria-controls="tabset-10-2" aria-selected="false" href="">default soils evaporation</a></li></ul>
+<div class="tab-content">
+<div id="tabset-10-1" class="unnumbered tab-pane active" role="tabpanel" aria-labelledby="tabset-10-1-tab">
+<div class="cell">
+<div class="cell-output-display">
+<p><img src="images/change_kpar_0.4_soil_evaporation.png" class="img-fluid" style="width:80.0%"></p>
+</div>
+</div>
+</div>
+<div id="tabset-10-2" class="unnumbered tab-pane" role="tabpanel" aria-labelledby="tabset-10-2-tab">
+<div class="cell">
+<div class="cell-output-display">
+<p><img src="images/default_soil_evaporation.png" class="img-fluid" style="width:80.0%"></p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+</section>
+<section id="other-observations" class="level2">
+<h2 class="anchored" data-anchor-id="other-observations">Other observations</h2>
+<p>When considering the SMAP output, independent of the magnitude of the deviation, there is a lack of banding which is associated with the SMAP fly over patterns (even after averaging over a month) in the reference data. Is this due to a change in resolution and or smoothing post-hoc? If so, could this be a source of uncertainty in all the above cases?</p>
+<div class="cell">
+<div class="cell-output-display">
+<div id="fig-striping" class="quarto-figure quarto-figure-center anchored">
+<figure class="figure">
+<p><img src="images/striping.png" class="img-fluid figure-img" style="width:80.0%"></p>
+<p></p><figcaption class="figure-caption">Figure&nbsp;1: SMAP striping in the new output</figcaption><p></p>
+</figure>
+</div>
+</div>
+</div>
+<div class="cell">
+<div class="cell-output-display">
+<div id="fig-no-striping" class="quarto-figure quarto-figure-center anchored">
+<figure class="figure">
+<p><img src="images/original_no_striping.png" class="img-fluid figure-img" style="width:80.0%"></p>
+<p></p><figcaption class="figure-caption">Figure&nbsp;2: Reference output does not show striping</figcaption><p></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    target: function(trigger) {
+      return trigger.previousElementSibling;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+  function tippyHover(el, contentFn) {
+    const config = {
+      allowHTML: true,
+      content: contentFn,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start'
+    };
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      return note.innerHTML;
+    });
+  }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+</body></html>
